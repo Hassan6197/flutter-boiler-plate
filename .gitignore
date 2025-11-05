@@ -1,0 +1,34 @@
+/.dart_tool/
+/.idea/
+/build/
+/.vscode/
+*.lock
+/.flutter-plugins
+/.flutter-plugins-dependencies
+/.packages
+.git.zip
+.git
+
+# Environment files
+.env
+*.env
+
+# Sensitive files
+key.properties
+keystore.jks
+*.jks
+google-services.json
+GoogleService-Info.plist
+
+# iOS
+ios/Flutter/flutter_export_environment.sh
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Android
+android/app/google-services.json
+android/key.properties
+android/keystore.jks

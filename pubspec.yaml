@@ -1,0 +1,44 @@
+name: flutter_bloc_boilerplate
+description: A production-ready Flutter boilerplate with BLoC pattern, featuring clean architecture, navigation, theming, and localization.
+version: 1.0.0+1
+environment: 
+  sdk: '>=2.12.0 <3.0.0'
+dependencies: 
+  flutter: 
+    sdk: flutter
+  flutter_localizations: 
+    sdk: flutter
+  flutter_bloc: ^9.1.1
+  connectivity_plus: ^7.0.0
+  shared_preferences: ^2.5.3
+  cached_network_image: ^3.4.1
+  flutter_svg: ^2.2.2
+  equatable: ^2.0.7
+  flutter_rating_bar: ^4.0.1
+  readmore: ^2.2.0
+
+  google_maps_flutter: ^2.5.0
+  intl: ^0.20.2
+dev_dependencies: 
+  flutter_test: 
+    sdk: flutter
+flutter: 
+  uses-material-design: true
+  assets: 
+    - assets/
+    - assets/images/
+  fonts: 
+    - family: Inter
+      fonts: 
+        - asset: assets/fonts/InterSemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/InterBold.ttf
+          weight: 700
+        - asset: assets/fonts/InterMedium.ttf
+          weight: 500
+        - asset: assets/fonts/InterRegular.ttf
+          weight: 400
+    - family: Poppins
+      fonts: 
+        - asset: assets/fonts/PoppinsBold.ttf
+          weight: 700
