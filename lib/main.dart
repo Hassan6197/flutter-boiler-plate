@@ -2,18 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/app_export.dart';
+import 'core/di/injection_container.dart';
 
 var globalMessengerKey = GlobalKey<ScaffoldMessengerState>();
-void main() {
+
+/// Main entry point of the application
+/// 
+/// Dependencies are initialized before running the app
+void main() async {
+  // Ensure Flutter binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
-  Future.wait([
+  
+  // Initialize all dependencies (DI Container)
+  await initializeDependencies();
+  
+  // Configure system UI and preferences
+  await Future.wait([
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
     ]),
     PrefUtils().init()
-  ]).then((value) {
-    runApp(MyApp());
-  });
+  ]);
+  
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {

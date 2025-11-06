@@ -15,12 +15,13 @@ A production-ready Flutter boilerplate featuring clean architecture with BLoC pa
 
 - 🏗️ **Clean Architecture** - Organized project structure with clear separation of concerns
 - 🔄 **BLoC Pattern** - Robust state management using flutter_bloc
+- 💉 **Dependency Injection** - Manual DI pattern without external packages
 - 🎨 **Theming System** - Built-in theme management with dark mode support
 - 🌍 **Localization** - Multi-language support ready
 - 🚀 **Navigation** - Pre-configured routing system
 - 📱 **Responsive Design** - Adaptive UI with SizeUtils
-- 🔌 **Network Layer** - API client structure ready for integration
-- 📦 **Example Screens** - Login, Dashboard with BLoC implementation examples
+- 🔌 **Network Layer** - API client with dummy login implementation
+- 📦 **Example Screens** - Complete login with API integration, Dashboard
 - ⚙️ **Easy Setup** - Interactive CLI tool for instant project configuration
 
 ## 📋 Table of Contents
@@ -28,10 +29,11 @@ A production-ready Flutter boilerplate featuring clean architecture with BLoC pa
 - [Quick Start](#-quick-start)
 - [Project Structure](#-project-structure)
 - [Architecture](#-architecture)
+- [Dependency Injection](#-dependency-injection)
 - [How to Add a New Screen](#-how-to-add-a-new-screen)
 - [State Management](#-state-management)
-- [Theming](#-theming)
 - [API Integration](#-api-integration)
+- [Theming](#-theming)
 - [Localization](#-localization)
 - [Contributing](#-contributing)
 
@@ -179,6 +181,117 @@ screen_name/
 ├── widgets/                      # Screen-specific widgets (optional)
 └── screen_name.dart             # UI implementation
 ```
+
+## 💉 Dependency Injection
+
+This boilerplate uses a **manual Service Locator pattern** for dependency injection without external packages.
+
+### Why DI?
+
+- ✅ **Testability**: Easy to mock dependencies in tests
+- ✅ **Flexibility**: Swap implementations without changing code
+- ✅ **Maintainability**: Clear and explicit dependencies
+
+### How It Works
+
+```dart
+// 1. Register dependencies in main.dart
+await initializeDependencies();
+
+// 2. Retrieve dependencies using locator
+final loginBloc = locator<LoginBloc>();
+
+// 3. Dependencies are automatically injected
+class LoginBloc {
+  final AuthRepository repository; // Injected automatically
+  
+  LoginBloc({required this.repository});
+}
+```
+
+### Registration Patterns
+
+#### Singleton (Created Once)
+```dart
+locator.registerSingleton<ApiClient>(
+  ApiClient(baseUrl: 'https://api.example.com'),
+);
+```
+**Use for**: API Client, NetworkInfo, Services
+
+#### Lazy Singleton (Created on First Use)
+```dart
+locator.registerLazySingleton<DatabaseService>(
+  () => DatabaseService(),
+);
+```
+**Use for**: Heavy services that might not be needed immediately
+
+#### Factory (New Instance Each Time)
+```dart
+locator.registerFactory<LoginBloc>(
+  () => LoginBloc(authRepository: locator<AuthRepository>()),
+);
+```
+**Use for**: BLoCs, ViewModels (to avoid state issues)
+
+### Complete Example
+
+#### Step 1: Register in `injection_container.dart`
+
+```dart
+class InjectionContainer {
+  static Future<void> init() async {
+    // Register API Client
+    locator.registerSingleton<ApiClient>(
+      ApiClient(baseUrl: 'https://api.example.com'),
+    );
+    
+    // Register Repository
+    locator.registerSingleton<AuthRepository>(
+      AuthRepository(apiClient: locator<ApiClient>()),
+    );
+    
+    // Register BLoC
+    locator.registerFactory<LoginBloc>(
+      () => LoginBloc(authRepository: locator<AuthRepository>()),
+    );
+  }
+}
+```
+
+#### Step 2: Use in Screen
+
+```dart
+static Widget builder(BuildContext context) {
+  return BlocProvider<LoginBloc>(
+    create: (context) => locator<LoginBloc>(), // Get from DI
+    child: LoginScreen(),
+  );
+}
+```
+
+### Full Login Example with API
+
+This boilerplate includes a complete working example:
+
+**Test Credentials**:
+- Email: `test@example.com`
+- Password: `password123`
+
+The login flow demonstrates:
+1. Form validation
+2. API call through repository
+3. Loading states
+4. Error handling
+5. Success navigation
+
+Try it in the app to see DI and API integration in action!
+
+### Learn More
+
+- 📖 [Complete DI Guide](docs/DEPENDENCY_INJECTION.md)
+- 🔌 [API Integration Guide](docs/API_INTEGRATION.md)
 
 ## 📱 How to Add a New Screen
 
