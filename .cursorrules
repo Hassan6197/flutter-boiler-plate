@@ -1,0 +1,1197 @@
+# Flutter BLoC Boilerplate - AI Assistant Guide
+
+## Project Overview
+
+This is a production-ready Flutter boilerplate using **Clean Architecture** with **BLoC pattern** for state management. The project emphasizes:
+
+- **State Management**: flutter_bloc package
+- **Dependency Injection**: Manual service locator pattern (no external DI packages)
+- **Architecture**: Clean separation into Presentation, Data, and Core layers
+- **Patterns**: Repository pattern, BLoC pattern, Builder pattern for screens
+
+## Core Principles
+
+1. **Immutability**: All states and models use `copyWith()` for updates
+2. **Dependency Injection**: All dependencies injected via constructor
+3. **Single Responsibility**: Each file has one clear purpose
+4. **Feature-First Structure**: Screens are self-contained with all related files
+5. **Type Safety**: Strong typing with explicit types, minimal use of `dynamic`
+
+---
+
+## Folder Structure
+
+```
+lib/
+├── core/                           # Core utilities and constants (no dependencies on other layers)
+│   ├── app_export.dart            # Central export file for common imports
+│   ├── constants/                 # App-wide constants
+│   ├── di/                        # Dependency Injection setup
+│   │   ├── injection_container.dart  # DI registration
+│   │   └── service_locator.dart      # Service locator implementation
+│   ├── errors/                    # Custom exception classes
+│   │   ├── api_exceptions.dart    # API-specific exceptions
+│   │   ├── exceptions.dart        # General exceptions
+│   │   └── failures.dart          # Failure classes
+│   ├── network/                   # Network utilities
+│   │   └── network_info.dart      # Connectivity checking
+│   └── utils/                     # Helper utilities
+│       ├── date_time_utils.dart
+│       ├── image_constant.dart
+│       ├── logger.dart
+│       ├── navigator_service.dart # Global navigation
+│       ├── pref_utils.dart        # SharedPreferences wrapper
+│       ├── size_utils.dart        # Responsive sizing
+│       └── validation_functions.dart
+│
+├── data/                          # Data layer (API, models, repositories)
+│   ├── apiClient/
+│   │   └── api_client.dart        # HTTP client wrapper
+│   ├── models/                    # Data models (DTOs)
+│   │   ├── auth/
+│   │   │   ├── login_request_model.dart
+│   │   │   ├── login_response_model.dart
+│   │   │   └── user_model.dart
+│   │   └── selectionPopupModel/
+│   └── repositories/              # Repository implementations
+│       └── auth_repository.dart
+│
+├── localization/                  # Internationalization
+│   ├── app_localization.dart
+│   └── en_us/
+│       └── en_us_translations.dart
+│
+├── presentation/                  # UI layer (screens, widgets, BLoCs)
+│   ├── [screen_name]/            # Each screen is a self-contained module
+│   │   ├── bloc/                 # BLoC for this screen
+│   │   │   ├── [screen_name]_bloc.dart
+│   │   │   ├── [screen_name]_event.dart
+│   │   │   └── [screen_name]_state.dart
+│   │   ├── models/               # Screen-specific models
+│   │   │   └── [screen_name]_model.dart
+│   │   ├── widgets/              # Screen-specific widgets (optional)
+│   │   └── [screen_name].dart    # Main screen widget
+│
+├── routes/
+│   └── app_routes.dart           # Route definitions and navigation
+│
+├── theme/                        # Theming and styling
+│   ├── bloc/                     # Theme management BLoC
+│   ├── app_decoration.dart       # Decoration styles
+│   ├── custom_button_style.dart
+│   ├── custom_text_style.dart
+│   └── theme_helper.dart
+│
+├── widgets/                      # Reusable widgets across screens
+│   ├── app_bar/
+│   ├── custom_elevated_button.dart
+│   ├── custom_text_form_field.dart
+│   └── ...
+│
+└── main.dart                     # App entry point
+```
+
+---
+
+## BLoC Pattern Implementation
+
+### Standard Screen Structure
+
+Every screen **MUST** follow this structure:
+
+```
+presentation/
+└── login_screen/
+    ├── bloc/
+    │   ├── login_bloc.dart      # Business logic
+    │   ├── login_event.dart     # User actions/events
+    │   └── login_state.dart     # UI states
+    ├── models/
+    │   └── login_model.dart     # Screen-specific data model
+    └── login_screen.dart        # UI implementation
+```
+
+### BLoC Files Pattern
+
+**1. Event File** (`[screen_name]_event.dart`)
+```dart
+part of '[screen_name]_bloc.dart';
+
+abstract class ScreenNameEvent extends Equatable {
+  @override
+  List<Object?> get props => [];
+}
+
+class ScreenNameInitialEvent extends ScreenNameEvent {}
+
+class LoadDataEvent extends ScreenNameEvent {
+  final String userId;
+  
+  LoadDataEvent({required this.userId});
+  
+  @override
+  List<Object?> get props => [userId];
+}
+```
+
+**2. State File** (`[screen_name]_state.dart`)
+```dart
+part of '[screen_name]_bloc.dart';
+
+class ScreenNameState extends Equatable {
+  final ScreenNameModel? screenNameModelObj;
+  final bool isLoading;
+  final String? errorMessage;
+  
+  ScreenNameState({
+    this.screenNameModelObj,
+    this.isLoading = false,
+    this.errorMessage,
+  });
+  
+  @override
+  List<Object?> get props => [screenNameModelObj, isLoading, errorMessage];
+  
+  ScreenNameState copyWith({
+    ScreenNameModel? screenNameModelObj,
+    bool? isLoading,
+    String? errorMessage,
+  }) {
+    return ScreenNameState(
+      screenNameModelObj: screenNameModelObj ?? this.screenNameModelObj,
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: errorMessage ?? this.errorMessage,
+    );
+  }
+}
+```
+
+**3. BLoC File** (`[screen_name]_bloc.dart`)
+```dart
+import 'package:equatable/equatable.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../models/[screen_name]_model.dart';
+
+part '[screen_name]_event.dart';
+part '[screen_name]_state.dart';
+
+class ScreenNameBloc extends Bloc<ScreenNameEvent, ScreenNameState> {
+  final SomeRepository repository; // Inject dependencies
+  
+  ScreenNameBloc({
+    required this.repository,
+  }) : super(ScreenNameState()) {
+    on<ScreenNameInitialEvent>(_onInitialize);
+    on<LoadDataEvent>(_onLoadData);
+  }
+  
+  _onInitialize(ScreenNameInitialEvent event, Emitter<ScreenNameState> emit) async {
+    // Initialize screen
+    emit(state.copyWith(
+      screenNameModelObj: ScreenNameModel(),
+      isLoading: false,
+    ));
+  }
+  
+  _onLoadData(LoadDataEvent event, Emitter<ScreenNameState> emit) async {
+    emit(state.copyWith(isLoading: true, errorMessage: null));
+    
+    try {
+      final result = await repository.getData(event.userId);
+      emit(state.copyWith(
+        isLoading: false,
+        screenNameModelObj: result,
+      ));
+    } on NetworkException catch (e) {
+      emit(state.copyWith(
+        isLoading: false,
+        errorMessage: 'No internet connection',
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isLoading: false,
+        errorMessage: 'An error occurred',
+      ));
+    }
+  }
+}
+```
+
+**4. Screen Widget** (`[screen_name].dart`)
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '/core/app_export.dart';
+import 'bloc/[screen_name]_bloc.dart';
+
+class ScreenName extends StatelessWidget {
+  // ALWAYS use builder pattern for BLoC provision
+  static Widget builder(BuildContext context) {
+    return BlocProvider<ScreenNameBloc>(
+      create: (context) => locator<ScreenNameBloc>()
+        ..add(ScreenNameInitialEvent()),
+      child: ScreenName(),
+    );
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Screen Name')),
+      body: BlocBuilder<ScreenNameBloc, ScreenNameState>(
+        builder: (context, state) {
+          if (state.isLoading) {
+            return Center(child: CircularProgressIndicator());
+          }
+          
+          if (state.errorMessage != null) {
+            return Center(child: Text(state.errorMessage!));
+          }
+          
+          return _buildContent(context, state);
+        },
+      ),
+    );
+  }
+  
+  Widget _buildContent(BuildContext context, ScreenNameState state) {
+    return Column(
+      children: [
+        // UI implementation
+      ],
+    );
+  }
+}
+```
+
+### Model Pattern
+
+**Screen-specific Model** (`models/[screen_name]_model.dart`)
+```dart
+import 'package:equatable/equatable.dart';
+
+class ScreenNameModel extends Equatable {
+  final String name;
+  final String email;
+  
+  ScreenNameModel({
+    this.name = '',
+    this.email = '',
+  });
+  
+  ScreenNameModel copyWith({
+    String? name,
+    String? email,
+  }) {
+    return ScreenNameModel(
+      name: name ?? this.name,
+      email: email ?? this.email,
+    );
+  }
+  
+  @override
+  List<Object?> get props => [name, email];
+}
+```
+
+---
+
+## Dependency Injection Rules
+
+### Registration in `injection_container.dart`
+
+**Location**: `lib/core/di/injection_container.dart`
+
+**Three Types of Registration:**
+
+1. **Singleton** - Created once, lives throughout app lifetime
+   ```dart
+   locator.registerSingleton<ApiClient>(
+     ApiClient(
+       baseUrl: 'https://api.example.com',
+       timeout: const Duration(seconds: 30),
+     ),
+   );
+   ```
+   **Use for**: ApiClient, NetworkInfo, PrefUtils, Services
+
+2. **Lazy Singleton** - Created on first access, then reused
+   ```dart
+   locator.registerLazySingleton<DatabaseService>(
+     () => DatabaseService(),
+   );
+   ```
+   **Use for**: Heavy services not needed immediately
+
+3. **Factory** - New instance created every time
+   ```dart
+   locator.registerFactory<LoginBloc>(
+     () => LoginBloc(
+       authRepository: locator<AuthRepository>(),
+     ),
+   );
+   ```
+   **Use for**: BLoCs (ALWAYS use factory to avoid state issues)
+
+### Registration Order (Important!)
+
+1. **Core Services First** (no dependencies)
+   ```dart
+   locator.registerSingleton<NetworkInfo>(NetworkInfo());
+   locator.registerSingleton<PrefUtils>(PrefUtils());
+   ```
+
+2. **API Client** (depends on core services)
+   ```dart
+   locator.registerSingleton<ApiClient>(ApiClient(...));
+   ```
+
+3. **Repositories** (depend on API client and services)
+   ```dart
+   locator.registerSingleton<AuthRepository>(
+     AuthRepository(
+       apiClient: locator<ApiClient>(),
+       networkInfo: locator<NetworkInfo>(),
+     ),
+   );
+   ```
+
+4. **BLoCs Last** (depend on repositories)
+   ```dart
+   locator.registerFactory<LoginBloc>(
+     () => LoginBloc(authRepository: locator<AuthRepository>()),
+   );
+   ```
+
+### Using Dependencies
+
+**In Screen Builder:**
+```dart
+static Widget builder(BuildContext context) {
+  return BlocProvider<LoginBloc>(
+    create: (context) => locator<LoginBloc>(),  // Get from DI
+    child: LoginScreen(),
+  );
+}
+```
+
+**In BLoC Constructor:**
+```dart
+class LoginBloc extends Bloc<LoginEvent, LoginState> {
+  final AuthRepository authRepository;  // Declare dependency
+  
+  LoginBloc({
+    required this.authRepository,  // Inject via constructor
+  }) : super(LoginState()) {
+    // ...
+  }
+}
+```
+
+---
+
+## Naming Conventions
+
+### Files
+- **Format**: `snake_case.dart`
+- **Examples**: 
+  - `login_screen.dart`
+  - `login_bloc.dart`
+  - `auth_repository.dart`
+  - `user_model.dart`
+
+### Classes
+- **Format**: `PascalCase`
+- **Examples**:
+  - `LoginScreen`
+  - `LoginBloc`
+  - `AuthRepository`
+  - `UserModel`
+
+### Variables & Parameters
+- **Format**: `camelCase`
+- **Examples**:
+  - `authRepository`
+  - `isLoading`
+  - `errorMessage`
+  - `emailController`
+
+### Constants
+- **Format**: `lowerCamelCase` or `SCREAMING_SNAKE_CASE`
+- **Examples**:
+  - `const String baseUrl = '...'`
+  - `const Duration DEFAULT_TIMEOUT = Duration(seconds: 30)`
+
+### BLoC-Specific Naming
+
+**BLoC Files:**
+- `[screen_name]_bloc.dart`
+- `[screen_name]_event.dart`
+- `[screen_name]_state.dart`
+
+**Events:**
+- End with `Event`: `LoginButtonPressed`, `LoadDataEvent`
+- Initial event: `[ScreenName]InitialEvent`
+
+**States:**
+- Single state class: `[ScreenName]State`
+- Properties: `isLoading`, `errorMessage`, `[screenName]ModelObj`
+
+**Models:**
+- End with `Model`: `LoginModel`, `UserModel`
+- Data models in `data/models/`
+- Screen models in `presentation/[screen]/models/`
+
+---
+
+## State Management Patterns
+
+### Providing BLoC to Screen
+
+**ALWAYS use the builder pattern:**
+```dart
+class LoginScreen extends StatelessWidget {
+  static Widget builder(BuildContext context) {
+    return BlocProvider<LoginBloc>(
+      create: (context) => locator<LoginBloc>()
+        ..add(LoginInitialEvent()),  // Trigger initial event
+      child: LoginScreen(),
+    );
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(/* ... */);
+  }
+}
+```
+
+### Reading State - BlocBuilder
+
+**Use `BlocBuilder` to rebuild UI on state changes:**
+```dart
+BlocBuilder<LoginBloc, LoginState>(
+  builder: (context, state) {
+    if (state.isLoading) {
+      return CircularProgressIndicator();
+    }
+    return Text(state.profileModelObj?.name ?? '');
+  },
+)
+```
+
+### Reading State - BlocSelector (Optimized)
+
+**Use `BlocSelector` to rebuild only when specific property changes:**
+```dart
+BlocSelector<LoginBloc, LoginState, String?>(
+  selector: (state) => state.profileModelObj?.name,
+  builder: (context, name) {
+    return Text(name ?? 'No name');
+  },
+)
+```
+
+### Dispatching Events
+
+**Option 1: Using `context.read()`**
+```dart
+context.read<LoginBloc>().add(
+  LoginButtonPressed(
+    email: emailController.text,
+    password: passwordController.text,
+  ),
+);
+```
+
+**Option 2: Using `BlocProvider.of()`**
+```dart
+BlocProvider.of<LoginBloc>(context).add(SomeEvent());
+```
+
+### Listening to State Changes
+
+**Use `BlocListener` for side effects (navigation, snackbars, etc.):**
+```dart
+BlocListener<LoginBloc, LoginState>(
+  listener: (context, state) {
+    if (state.isSuccess) {
+      Navigator.pushNamed(context, AppRoutes.dashboardScreen);
+    }
+    if (state.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(state.errorMessage!)),
+      );
+    }
+  },
+  child: /* ... */,
+)
+```
+
+**Combine with builder using `BlocConsumer`:**
+```dart
+BlocConsumer<LoginBloc, LoginState>(
+  listener: (context, state) {
+    // Side effects
+  },
+  builder: (context, state) {
+    // UI
+  },
+)
+```
+
+### State Immutability
+
+**ALWAYS use `copyWith()` to update state:**
+```dart
+// ❌ DON'T - Direct mutation
+state.isLoading = true;
+
+// ✅ DO - Create new state with copyWith
+emit(state.copyWith(isLoading: true));
+
+// ✅ DO - Update multiple properties
+emit(state.copyWith(
+  isLoading: false,
+  errorMessage: null,
+  isSuccess: true,
+));
+```
+
+---
+
+## API Integration & Repository Pattern
+
+### Repository Pattern
+
+**Location**: `lib/data/repositories/`
+
+**Structure:**
+```dart
+import 'package:flutter_bloc_boilerplate/core/errors/api_exceptions.dart';
+import 'package:flutter_bloc_boilerplate/core/network/network_info.dart';
+import 'package:flutter_bloc_boilerplate/data/apiClient/api_client.dart';
+
+class AuthRepository {
+  final ApiClient apiClient;
+  final NetworkInfo networkInfo;
+  
+  AuthRepository({
+    required this.apiClient,
+    required this.networkInfo,
+  });
+  
+  Future<LoginResponseModel> login({
+    required String email,
+    required String password,
+  }) async {
+    // 1. Check connectivity
+    final isConnected = await networkInfo.isConnected();
+    if (!isConnected) {
+      throw NetworkException('No internet connection');
+    }
+    
+    try {
+      // 2. Create request model
+      final request = LoginRequestModel(
+        email: email,
+        password: password,
+      );
+      
+      // 3. Make API call
+      final response = await apiClient.post(
+        '/api/auth/login',
+        body: request.toJson(),
+      );
+      
+      // 4. Parse response
+      final loginResponse = LoginResponseModel.fromJson(response);
+      
+      // 5. Handle success (store token, etc.)
+      if (loginResponse.success && loginResponse.data != null) {
+        // Store auth token if needed
+        print('Token: ${loginResponse.data!.token}');
+      }
+      
+      return loginResponse;
+    } on ApiException {
+      rethrow;  // Re-throw API exceptions
+    } catch (e) {
+      throw ServerException('Unexpected error: $e');
+    }
+  }
+}
+```
+
+### API Client Usage
+
+**Location**: `lib/data/apiClient/api_client.dart`
+
+**Available Methods:**
+```dart
+// GET request
+final response = await apiClient.get(
+  '/api/users/profile',
+  queryParameters: {'userId': '123'},
+);
+
+// POST request
+final response = await apiClient.post(
+  '/api/auth/login',
+  body: {'email': 'test@example.com', 'password': 'pass123'},
+);
+
+// PUT request
+final response = await apiClient.put(
+  '/api/users/123',
+  body: {'name': 'John Doe'},
+);
+
+// DELETE request
+final response = await apiClient.delete('/api/users/123');
+```
+
+### Error Handling
+
+**Custom Exception Types** (`lib/core/errors/api_exceptions.dart`):
+
+1. **NetworkException** - No internet connection
+2. **UnauthorizedException** - Invalid credentials (401)
+3. **ValidationException** - Validation errors (422)
+4. **ServerException** - Server errors (500+)
+5. **TimeoutException** - Request timeout
+
+**Error Handling in BLoC:**
+```dart
+_onLoginButtonPressed(LoginButtonPressed event, Emitter<LoginState> emit) async {
+  emit(state.copyWith(isLoading: true, errorMessage: null));
+  
+  try {
+    final response = await authRepository.login(
+      email: event.email,
+      password: event.password,
+    );
+    
+    emit(state.copyWith(
+      isLoading: false,
+      isSuccess: true,
+    ));
+  } on UnauthorizedException catch (e) {
+    emit(state.copyWith(
+      isLoading: false,
+      errorMessage: 'Invalid email or password',
+    ));
+  } on NetworkException catch (e) {
+    emit(state.copyWith(
+      isLoading: false,
+      errorMessage: 'No internet connection',
+    ));
+  } on ValidationException catch (e) {
+    emit(state.copyWith(
+      isLoading: false,
+      errorMessage: e.message,
+    ));
+  } catch (e) {
+    emit(state.copyWith(
+      isLoading: false,
+      errorMessage: 'An unexpected error occurred',
+    ));
+  }
+}
+```
+
+---
+
+## Navigation
+
+### Route Registration
+
+**Location**: `lib/routes/app_routes.dart`
+
+```dart
+class AppRoutes {
+  // Route constants
+  static const String splashScreen = '/splash_screen';
+  static const String loginScreen = '/login_screen';
+  static const String dashboardScreen = '/dashboard_screen';
+  static const String initialRoute = '/initialRoute';
+  
+  // Route map
+  static Map<String, WidgetBuilder> get routes => {
+    splashScreen: SplashScreen.builder,
+    loginScreen: LoginScreen.builder,
+    dashboardScreen: DashboardScreen.builder,
+    initialRoute: SplashScreen.builder,
+  };
+}
+```
+
+### Navigation Methods
+
+**1. Using Named Routes:**
+```dart
+// Navigate to route
+Navigator.pushNamed(context, AppRoutes.loginScreen);
+
+// Navigate and replace
+Navigator.pushReplacementNamed(context, AppRoutes.dashboardScreen);
+
+// Navigate and clear stack
+Navigator.pushNamedAndRemoveUntil(
+  context,
+  AppRoutes.dashboardScreen,
+  (route) => false,
+);
+
+// Go back
+Navigator.pop(context);
+```
+
+**2. Using NavigatorService (Global Navigation):**
+```dart
+// Navigate
+NavigatorService.pushNamed(AppRoutes.loginScreen);
+
+// Go back
+NavigatorService.goBack();
+
+// Show dialog
+NavigatorService.showDialog(/* ... */);
+```
+
+**3. Passing Arguments:**
+```dart
+// Navigate with arguments
+Navigator.pushNamed(
+  context,
+  AppRoutes.profileScreen,
+  arguments: {'userId': '123'},
+);
+
+// Receive arguments in screen
+@override
+Widget build(BuildContext context) {
+  final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+  final userId = args['userId'];
+  // ...
+}
+```
+
+---
+
+## Widget Conventions
+
+### Custom Reusable Widgets
+
+**Location**: `lib/widgets/`
+
+**Pattern:**
+```dart
+import 'package:flutter/material.dart';
+import '../core/app_export.dart';
+import 'base_button.dart';
+
+class CustomElevatedButton extends BaseButton {
+  CustomElevatedButton({
+    Key? key,
+    this.decoration,
+    this.leftIcon,
+    this.rightIcon,
+    EdgeInsets? margin,
+    VoidCallback? onPressed,
+    ButtonStyle? buttonStyle,
+    Alignment? alignment,
+    TextStyle? buttonTextStyle,
+    bool? isDisabled,
+    double? height,
+    double? width,
+    required String text,
+  }) : super(
+    text: text,
+    onPressed: onPressed,
+    buttonStyle: buttonStyle,
+    isDisabled: isDisabled,
+    buttonTextStyle: buttonTextStyle,
+    height: height,
+    width: width,
+    alignment: alignment,
+    margin: margin,
+  );
+  
+  final BoxDecoration? decoration;
+  final Widget? leftIcon;
+  final Widget? rightIcon;
+  
+  @override
+  Widget build(BuildContext context) {
+    return alignment != null
+        ? Align(alignment: alignment!, child: buildElevatedButtonWidget)
+        : buildElevatedButtonWidget;
+  }
+  
+  Widget get buildElevatedButtonWidget => Container(
+    height: height ?? 50.v,
+    width: width ?? double.maxFinite,
+    margin: margin,
+    decoration: decoration,
+    child: ElevatedButton(
+      style: buttonStyle,
+      onPressed: isDisabled ?? false ? null : onPressed ?? () {},
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          leftIcon ?? const SizedBox.shrink(),
+          Text(text, style: buttonTextStyle),
+          rightIcon ?? const SizedBox.shrink(),
+        ],
+      ),
+    ),
+  );
+}
+```
+
+### Using Custom Widgets
+
+```dart
+CustomElevatedButton(
+  text: "Login",
+  onPressed: () {
+    context.read<LoginBloc>().add(LoginButtonPressed());
+  },
+  buttonStyle: CustomButtonStyles.fillPrimary,
+  buttonTextStyle: CustomTextStyles.titleSmallPrimaryBold,
+  margin: EdgeInsets.symmetric(horizontal: 20.h),
+)
+```
+
+### Import Pattern
+
+**ALWAYS import from `core/app_export.dart` for common utilities:**
+```dart
+import '/core/app_export.dart';
+// This exports:
+// - flutter_bloc
+// - size_utils
+// - theme_helper
+// - custom styles
+// - app_localization
+// - navigator_service
+// - logger, etc.
+```
+
+---
+
+## Code Organization Rules
+
+### ✅ DO's
+
+1. **One Screen = One Folder**
+   ```
+   presentation/profile_screen/
+   ├── bloc/
+   ├── models/
+   ├── widgets/  (optional)
+   └── profile_screen.dart
+   ```
+
+2. **Use Part Files for BLoC**
+   ```dart
+   // In bloc file
+   part 'login_event.dart';
+   part 'login_state.dart';
+   
+   // In event/state files
+   part of 'login_bloc.dart';
+   ```
+
+3. **Import Order**
+   ```dart
+   // 1. Dart imports
+   import 'dart:async';
+   import 'dart:convert';
+   
+   // 2. Flutter imports
+   import 'package:flutter/material.dart';
+   
+   // 3. Third-party packages
+   import 'package:flutter_bloc/flutter_bloc.dart';
+   import 'package:equatable/equatable.dart';
+   
+   // 4. Project imports
+   import '/core/app_export.dart';
+   import '../models/login_model.dart';
+   ```
+
+4. **Use Const Constructors**
+   ```dart
+   const Text('Hello')  // ✅ Better performance
+   Text('Hello')        // ⚠️ Unnecessary rebuilds
+   ```
+
+5. **Extract Complex Widgets**
+   ```dart
+   Widget _buildProfileHeader(BuildContext context, ProfileState state) {
+     return Container(/* complex widget */);
+   }
+   ```
+
+### ❌ DON'Ts
+
+1. **Don't Mix Layers**
+   ```dart
+   // ❌ BAD - BLoC calling API directly
+   class LoginBloc {
+     final ApiClient apiClient;
+     // BLoC should use Repository, not ApiClient directly
+   }
+   
+   // ✅ GOOD - BLoC uses Repository
+   class LoginBloc {
+     final AuthRepository authRepository;
+   }
+   ```
+
+2. **Don't Mutate State Directly**
+   ```dart
+   // ❌ BAD
+   state.isLoading = true;
+   
+   // ✅ GOOD
+   emit(state.copyWith(isLoading: true));
+   ```
+
+3. **Don't Register BLoCs as Singletons**
+   ```dart
+   // ❌ BAD - State persists between screens
+   locator.registerSingleton<LoginBloc>(LoginBloc());
+   
+   // ✅ GOOD - Fresh instance each time
+   locator.registerFactory<LoginBloc>(() => LoginBloc());
+   ```
+
+4. **Don't Skip Builder Pattern**
+   ```dart
+   // ❌ BAD - Direct screen instantiation
+   routes: {
+     '/login': (context) => LoginScreen(),
+   }
+   
+   // ✅ GOOD - Use builder
+   routes: {
+     '/login': LoginScreen.builder,
+   }
+   ```
+
+5. **Don't Use BuildContext Across Async Gaps Without Checking**
+   ```dart
+   // ❌ BAD
+   Future<void> loadData() async {
+     await Future.delayed(Duration(seconds: 2));
+     Navigator.pop(context);  // Context might be invalid
+   }
+   
+   // ✅ GOOD
+   Future<void> loadData() async {
+     await Future.delayed(Duration(seconds: 2));
+     if (mounted) Navigator.pop(context);
+   }
+   ```
+
+---
+
+## Localization
+
+### Adding Translations
+
+**Location**: `lib/localization/en_us/en_us_translations.dart`
+
+```dart
+Map<String, String> enUs() {
+  return {
+    'lbl_welcome': 'Welcome',
+    'lbl_login': 'Login',
+    'msg_hello_user': 'Hello, @name!',
+    'err_invalid_email': 'Please enter a valid email',
+  };
+}
+```
+
+### Using Translations in UI
+
+```dart
+// Simple translation
+Text("lbl_welcome".tr)  // Output: "Welcome"
+
+// Translation with parameters
+Text("msg_hello_user".tr.replaceAll('@name', userName))
+// Output: "Hello, John!"
+```
+
+---
+
+## Theming
+
+### Using Theme Styles
+
+```dart
+// Theme from context
+Text('Hello', style: theme.textTheme.titleMedium);
+
+// Custom text styles
+Text('Hello', style: CustomTextStyles.labelLargeCyan300);
+Text('Title', style: CustomTextStyles.titleSmallPrimaryBold);
+
+// Colors
+Container(color: appTheme.cyan300);
+Container(color: theme.colorScheme.primary);
+
+// Custom button styles
+CustomElevatedButton(
+  text: "Submit",
+  buttonStyle: CustomButtonStyles.fillPrimary,
+)
+```
+
+### Switching Themes
+
+```dart
+// Switch theme
+context.read<ThemeBloc>().add(
+  ChangeThemeEvent(themeType: ThemeType.dark),
+);
+```
+
+---
+
+## Quick Reference: Adding a New Screen
+
+1. **Create folder structure**
+   ```
+   lib/presentation/profile_screen/
+   ├── bloc/
+   ├── models/
+   └── profile_screen.dart
+   ```
+
+2. **Create model** (`models/profile_model.dart`)
+3. **Create event** (`bloc/profile_event.dart`)
+4. **Create state** (`bloc/profile_state.dart`)
+5. **Create BLoC** (`bloc/profile_bloc.dart`)
+6. **Create screen** (`profile_screen.dart`)
+7. **Register BLoC in DI** (`core/di/injection_container.dart`)
+   ```dart
+   locator.registerFactory<ProfileBloc>(
+     () => ProfileBloc(repository: locator<SomeRepository>()),
+   );
+   ```
+8. **Add route** (`routes/app_routes.dart`)
+   ```dart
+   static const String profileScreen = '/profile_screen';
+   
+   static Map<String, WidgetBuilder> get routes => {
+     profileScreen: ProfileScreen.builder,
+     // ...
+   };
+   ```
+
+---
+
+## Testing Considerations
+
+### Current Test Setup
+- Test file: `test/widget_test.dart`
+- When writing tests, mock dependencies using the service locator
+- Reset locator between tests: `InjectionContainer.reset()`
+
+### Mock Example
+```dart
+// In tests, register mock
+locator.registerSingleton<AuthRepository>(MockAuthRepository());
+```
+
+---
+
+## Performance Tips
+
+1. **Use `const` constructors wherever possible**
+2. **Use `BlocSelector` instead of `BlocBuilder` for granular updates**
+3. **Dispose controllers in BLoC** when done
+4. **Use `ListView.builder` for long lists**
+5. **Cache network images** (already using `cached_network_image`)
+6. **Use `RepaintBoundary` for complex widgets**
+
+---
+
+## Common Patterns Summary
+
+### BLoC State Loading Pattern
+```dart
+emit(state.copyWith(isLoading: true, errorMessage: null));
+try {
+  final result = await repository.getData();
+  emit(state.copyWith(isLoading: false, data: result));
+} catch (e) {
+  emit(state.copyWith(isLoading: false, errorMessage: e.toString()));
+}
+```
+
+### Form Validation Pattern
+```dart
+// In state
+final TextEditingController? emailController;
+final String? emailError;
+
+// In BLoC event
+if (!isValidEmail(event.email)) {
+  emit(state.copyWith(emailError: 'Invalid email format'));
+  return;
+}
+```
+
+### Success Navigation Pattern
+```dart
+// In screen with BlocListener
+BlocListener<LoginBloc, LoginState>(
+  listener: (context, state) {
+    if (state.isSuccess) {
+      Navigator.pushReplacementNamed(context, AppRoutes.dashboardScreen);
+    }
+  },
+  child: /* ... */,
+)
+```
+
+---
+
+## Project-Specific Notes
+
+- **Current Base URL**: `https://api.example.com` (update in `injection_container.dart`)
+- **Test Login Credentials**: 
+  - Email: `test@example.com`
+  - Password: `password123`
+- **Dummy API**: Currently using simulated responses in `ApiClient`
+- **Fonts**: Inter and Poppins (configured in `pubspec.yaml`)
+- **Minimum SDK**: `>=2.12.0 <3.0.0`
+
+---
+
+## When Adding New Features
+
+**ALWAYS:**
+1. Follow the existing BLoC pattern
+2. Register dependencies in `injection_container.dart`
+3. Use builder pattern for screens
+4. Handle errors with try-catch in BLoC
+5. Use `copyWith()` for state updates
+6. Add route to `AppRoutes`
+7. Import from `core/app_export.dart` when possible
+8. Use existing custom widgets from `widgets/` folder
+9. Keep screen-specific code in the screen's folder
+10. Test with dummy data first before real API integration
+
+---
+
+This guide ensures consistency and maintainability across the codebase. Always refer to existing implementations (especially `LoginScreen` and `AuthRepository`) as reference examples.
+
+
+
