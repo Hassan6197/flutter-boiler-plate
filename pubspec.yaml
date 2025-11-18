@@ -1,8 +1,8 @@
 name: flutter_bloc_boilerplate
 description: A production-ready Flutter boilerplate with BLoC pattern, featuring clean architecture, navigation, theming, and localization.
 version: 1.0.0+1
-environment: 
-  sdk: '>=2.12.0 <3.0.0'
+environment:
+  sdk: ">=3.10.0 <4.0.0"
 dependencies: 
   flutter: 
     sdk: flutter
