@@ -5,6 +5,7 @@ export 'package:flutter_bloc_boilerplate/core/network/network_info.dart';
 export 'package:flutter_bloc_boilerplate/core/utils/image_constant.dart';
 export 'package:flutter_bloc_boilerplate/core/utils/logger.dart';
 export 'package:flutter_bloc_boilerplate/core/utils/navigator_service.dart';
+export 'package:flutter_bloc_boilerplate/core/constants/theme_config.dart';
 export 'package:flutter_bloc_boilerplate/core/utils/pref_utils.dart';
 export 'package:flutter_bloc_boilerplate/core/utils/size_utils.dart';
 export 'package:flutter_bloc_boilerplate/data/models/selectionPopupModel/selection_popup_model.dart';

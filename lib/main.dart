@@ -36,12 +36,21 @@ class MyApp extends StatelessWidget {
           create: (context) => ThemeBloc(
             ThemeState(
               themeType: PrefUtils().getThemeData(),
+              fontFamily: PrefUtils().getFontFamily(),
+              fontSizeScale: PrefUtils().getFontSizeScale(),
             ),
           ),
           child: BlocBuilder<ThemeBloc, ThemeState>(
             builder: (context, state) {
+              // Create ThemeHelper with current state values
+              final themeHelper = ThemeHelper(
+                themeType: state.themeType,
+                fontFamily: state.fontFamily,
+                fontSizeScale: state.fontSizeScale,
+              );
+              
               return MaterialApp(
-                theme: theme,
+                theme: themeHelper.themeData(),
                 title: 'Flutter Boilerplate',
                 navigatorKey: NavigatorService.navigatorKey,
                 debugShowCheckedModeBanner: false,

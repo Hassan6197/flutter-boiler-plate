@@ -35,4 +35,28 @@ class PrefUtils {
       return 'primary';
     }
   }
+
+  Future<void> setFontFamily(String value) {
+    return _sharedPreferences!.setString('fontFamily', value);
+  }
+
+  String getFontFamily() {
+    try {
+      return _sharedPreferences!.getString('fontFamily')!;
+    } catch (e) {
+      return 'Inter';
+    }
+  }
+
+  Future<void> setFontSizeScale(String value) {
+    return _sharedPreferences!.setString('fontSizeScale', value);
+  }
+
+  String getFontSizeScale() {
+    try {
+      return _sharedPreferences!.getString('fontSizeScale')!;
+    } catch (e) {
+      return 'medium';
+    }
+  }
 }

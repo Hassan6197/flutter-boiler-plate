@@ -156,12 +156,20 @@ class CustomTextStyles {
 }
 
 extension on TextStyle {
+  /// Apply Inter font family
+  /// 
+  /// This extension allows explicitly using Inter font even if
+  /// the current theme uses a different default font family.
   TextStyle get inter {
     return copyWith(
       fontFamily: 'Inter',
     );
   }
 
+  /// Apply Poppins font family
+  /// 
+  /// This extension allows explicitly using Poppins font even if
+  /// the current theme uses a different default font family.
   TextStyle get poppins {
     return copyWith(
       fontFamily: 'Poppins',
